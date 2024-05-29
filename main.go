@@ -53,25 +53,39 @@ func main() {
 	router := gin.Default()
 
 	// Router Admin
-	authorized := router.Group("/", gin.BasicAuth(gin.Accounts{
+	authorized := router.Group("/admin", gin.BasicAuth(gin.Accounts{
 		"admin":  "password",
 		"editor": "secret",
 	}))
 
 	authorized.GET("/patients", controllers.GetAllPatients)
+	authorized.POST("/patients", controllers.InsertPatient)
+	authorized.PUT("/patients/:id", controllers.UpdatePatient)
 	authorized.DELETE("/patients/:id", controllers.DeletePatient)
 
-	// Router Public
-	public := router.Group("/api")
+	authorized.GET("/doctors", controllers.GetAllDoctors)
+	authorized.POST("/doctors", controllers.InsertDoctor)
+	authorized.PUT("/doctors/:id", controllers.UpdateDoctor)
+	authorized.DELETE("/doctors/:id", controllers.DeleteDoctor)
 
-	public.POST("/register", controllers.Register)
-	public.POST("/login", controllers.Login)
+	// Router Public Patient
+	publicPatient := router.Group("/patient")
+
+	publicPatient.POST("/register", controllers.RegisterPatient)
+	publicPatient.POST("/login", controllers.LoginPatient)
+
+	// Router Public Doctor
+	publicDoctor := router.Group("/doctor")
+
+	publicDoctor.POST("/register", controllers.RegisterDoctor)
+	publicDoctor.POST("/login", controllers.LoginDoctor)
 
 	// Router JWT Auth
-	protected := router.Group("/api/admin")
+	protected := router.Group("/api/")
 	protected.Use(middlewares.JwtAuthMiddleware())
 
-	protected.GET("/user", controllers.CurrentUser)
+	protected.GET("/patient-data", controllers.CurrentPatient)
+	protected.GET("/doctor-data", controllers.CurrentDoctor)
 
 	router.Run("localhost:8080")
 }

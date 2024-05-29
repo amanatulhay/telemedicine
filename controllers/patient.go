@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func GetAllPatients(c *gin.Context) {
@@ -55,6 +56,12 @@ func InsertPatient(c *gin.Context) {
 	}
 	patient.ID++
 
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(patient.Password), bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	patient.Password = string(hashedPassword)
+
 	err = repository.InsertPatient(database.DbConnection, patient)
 	if err != nil {
 		panic(err)
@@ -88,6 +95,12 @@ func UpdatePatient(c *gin.Context) {
 			patient.CreatedAt = v.CreatedAt
 		}
 	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(patient.Password), bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	patient.Password = string(hashedPassword)
 
 	// Update Patient
 	err = repository.UpdatePatient(database.DbConnection, patient)

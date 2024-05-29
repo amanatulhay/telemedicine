@@ -16,7 +16,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func CurrentUser(c *gin.Context) {
+func CurrentPatient(c *gin.Context) {
 
 	var p structs.Patient
 
@@ -42,7 +42,7 @@ func CurrentUser(c *gin.Context) {
 	}
 
 	if !found {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.New("User not found!")})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.New("Patient not found!")})
 		return
 	}
 
@@ -51,7 +51,7 @@ func CurrentUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "success", "data": p})
 }
 
-func Login(c *gin.Context) {
+func LoginPatient(c *gin.Context) {
 
 	var patient structs.Patient
 
@@ -60,13 +60,6 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	// u := models.User{}
-
-	// u.Username = input.Username
-	// u.Password = input.Password
-
-	// token, err := models.LoginCheck(u.Username, u.Password)
 
 	err2, patients := repository.GetAllPatients(database.DbConnection)
 	if err2 != nil {
@@ -104,7 +97,7 @@ func Login(c *gin.Context) {
 
 }
 
-func Register(c *gin.Context) {
+func RegisterPatient(c *gin.Context) {
 
 	var patient structs.Patient
 
@@ -136,7 +129,7 @@ func Register(c *gin.Context) {
 	}
 	patient.Password = string(hashedPassword)
 
-	//remove spaces in username
+	//remove spaces in name
 	patient.Name = html.EscapeString(strings.TrimSpace(patient.Name))
 
 	err = repository.InsertPatient(database.DbConnection, patient)
@@ -144,6 +137,6 @@ func Register(c *gin.Context) {
 		panic(err)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "registration success"})
+	c.JSON(http.StatusOK, gin.H{"message": "Patient registration success"})
 
 }
