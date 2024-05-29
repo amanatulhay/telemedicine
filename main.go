@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"telemedicine/controllers"
 	"telemedicine/database"
+	"telemedicine/middlewares"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -24,6 +26,12 @@ var (
 )
 
 func main() {
+	err := godotenv.Load(".env")
+	if err != nil {
+		fmt.Println("failed load file environment")
+	} else {
+		fmt.Println("success read file environment")
+	}
 
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
@@ -44,11 +52,26 @@ func main() {
 	// Router GIN
 	router := gin.Default()
 
-	// Router Category
-	router.GET("/patients", controllers.GetAllPatients)
-	router.POST("/patients", controllers.InsertPatient)
-	router.PUT("/patients/:id", controllers.UpdatePatient)
-	router.DELETE("/patients/:id", controllers.DeletePatient)
+	// Router Admin
+	authorized := router.Group("/", gin.BasicAuth(gin.Accounts{
+		"admin":  "password",
+		"editor": "secret",
+	}))
+
+	authorized.GET("/patients", controllers.GetAllPatients)
+	authorized.DELETE("/patients/:id", controllers.DeletePatient)
+
+	// Router Public
+	public := router.Group("/api")
+
+	public.POST("/register", controllers.Register)
+	public.POST("/login", controllers.Login)
+
+	// Router JWT Auth
+	protected := router.Group("/api/admin")
+	protected.Use(middlewares.JwtAuthMiddleware())
+
+	protected.GET("/user", controllers.CurrentUser)
 
 	router.Run("localhost:8080")
 }

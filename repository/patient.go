@@ -32,7 +32,7 @@ func GetAllPatients(db *sql.DB) (err error, results []structs.Patient) {
 func InsertPatient(db *sql.DB, patient structs.Patient) (err error) {
 	sql := "INSERT INTO patient(id, name, password, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)"
 
-	errs := db.QueryRow(sql, patient.ID, patient.Name, &patient.Password, patient.CreatedAt, patient.UpdatedAt)
+	errs := db.QueryRow(sql, patient.ID, patient.Name, patient.Password, patient.CreatedAt, patient.UpdatedAt)
 
 	return errs.Err()
 }
