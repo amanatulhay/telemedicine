@@ -10,7 +10,7 @@ func GetAllDoctors(db *sql.DB) (err error, results []structs.Doctor) {
 
 	rows, err := db.Query(sql)
 	if err != nil {
-		panic(err)
+		return
 	}
 
 	defer rows.Close()
@@ -20,7 +20,7 @@ func GetAllDoctors(db *sql.DB) (err error, results []structs.Doctor) {
 
 		err = rows.Scan(&doctor.ID, &doctor.Name, &doctor.Password, &doctor.CreatedAt, &doctor.UpdatedAt)
 		if err != nil {
-			panic(err)
+			return
 		}
 
 		results = append(results, doctor)

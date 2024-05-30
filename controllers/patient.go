@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"telemedicine/database"
 	"telemedicine/repository"
 	"telemedicine/structs"
+	"telemedicine/utils"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,23 +15,22 @@ import (
 )
 
 func GetAllPatients(c *gin.Context) {
-	var (
-		result gin.H
-	)
 
 	err, patients := repository.GetAllPatients(database.DbConnection)
 
 	if err != nil {
-		result = gin.H{
-			"result": err,
-		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
 	} else {
-		result = gin.H{
-			"result": patients,
-		}
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Berhasil mengambil seluruh data Patients",
+			"data":    patients,
+		})
 	}
-
-	c.JSON(http.StatusOK, result)
 }
 
 func InsertPatient(c *gin.Context) {
@@ -37,7 +38,12 @@ func InsertPatient(c *gin.Context) {
 
 	err := c.ShouldBindJSON(&patient)
 	if err != nil {
-		panic(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Field Name dan Password tidak boleh kosong",
+			"data":    utils.NullData,
+		})
+		return
 	}
 
 	patient.CreatedAt = time.Now()
@@ -46,7 +52,12 @@ func InsertPatient(c *gin.Context) {
 	err2, patients := repository.GetAllPatients(database.DbConnection)
 	patient.ID = 0
 	if err2 != nil {
-		panic(err2)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
 	}
 	for _, v := range patients {
 		if v.ID > patient.ID {
@@ -58,47 +69,88 @@ func InsertPatient(c *gin.Context) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(patient.Password), bcrypt.DefaultCost)
 	if err != nil {
-		panic(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
 	}
 	patient.Password = string(hashedPassword)
 
 	err = repository.InsertPatient(database.DbConnection, patient)
 	if err != nil {
-		panic(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"result": "Success Insert Patient",
+		"success": true,
+		"message": "Berhasil menambahkan data Patient",
+		"data":    utils.NullData,
 	})
-
 }
 
 func UpdatePatient(c *gin.Context) {
 	var patient structs.Patient
+	var createdAt time.Time
 	id, _ := strconv.Atoi(c.Param("id"))
 
-	err := c.ShouldBindJSON(&patient)
+	err, patients := repository.GetAllPatients(database.DbConnection)
 	if err != nil {
-		panic(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
+	}
+
+	found := false
+	for _, v := range patients {
+		if v.ID == int64(id) {
+			// Mengambil waktu CreatedAt pada database sebelum diupdate
+			createdAt = v.CreatedAt
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("Data Patient dengan id %d tidak ditemukan", id),
+			"data":    utils.NullData,
+		})
+		return
+	}
+
+	err = c.ShouldBindJSON(&patient)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Field Name dan Password tidak boleh kosong",
+			"data":    utils.NullData,
+		})
+		return
 	}
 
 	patient.ID = int64(id)
 	patient.UpdatedAt = time.Now()
-
-	err2, patients := repository.GetAllPatients(database.DbConnection)
-	if err2 != nil {
-		panic(err2)
-	}
-	for _, v := range patients {
-		if v.ID == patient.ID {
-			// Mengambil waktu CreatedAt pada database sebelum diupdate
-			patient.CreatedAt = v.CreatedAt
-		}
-	}
+	patient.CreatedAt = createdAt
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(patient.Password), bcrypt.DefaultCost)
 	if err != nil {
-		panic(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
 	}
 	patient.Password = string(hashedPassword)
 
@@ -106,11 +158,18 @@ func UpdatePatient(c *gin.Context) {
 	err = repository.UpdatePatient(database.DbConnection, patient)
 
 	if err != nil {
-		panic(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"result": "Success Update Patient",
+		"success": true,
+		"message": "Berhasil memperbarui data Patient",
+		"data":    utils.NullData,
 	})
 }
 
@@ -118,14 +177,48 @@ func DeletePatient(c *gin.Context) {
 	var patient structs.Patient
 	id, _ := strconv.Atoi(c.Param("id"))
 
+	err, patients := repository.GetAllPatients(database.DbConnection)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
+	}
+
+	found := false
+	for _, v := range patients {
+		if v.ID == int64(id) {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("Data Patient dengan id %d tidak ditemukan", id),
+			"data":    utils.NullData,
+		})
+		return
+	}
+
 	patient.ID = int64(id)
 
-	err := repository.DeletePatient(database.DbConnection, patient)
+	err = repository.DeletePatient(database.DbConnection, patient)
 	if err != nil {
-		panic(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"result": "Success Delete Patient",
+		"success": true,
+		"message": "Berhasil menghapus data Patient",
+		"data":    utils.NullData,
 	})
 }

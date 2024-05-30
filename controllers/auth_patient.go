@@ -1,13 +1,14 @@
 package controllers
 
 import (
-	"errors"
+	"fmt"
 	"html"
 	"net/http"
 	"strings"
 	"telemedicine/database"
 	"telemedicine/repository"
 	"telemedicine/structs"
+	"telemedicine/utils"
 	"time"
 
 	"telemedicine/utils/token"
@@ -23,7 +24,11 @@ func CurrentPatient(c *gin.Context) {
 	user_id, err := token.ExtractTokenID(c)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": err.Error(),
+			"data":    utils.NullData,
+		})
 		return
 	}
 
@@ -31,7 +36,12 @@ func CurrentPatient(c *gin.Context) {
 	err2, patients := repository.GetAllPatients(database.DbConnection)
 	found := false
 	if err2 != nil {
-		panic(err2)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
 	}
 	for _, v := range patients {
 		if user_id == uint(v.ID) {
@@ -42,13 +52,21 @@ func CurrentPatient(c *gin.Context) {
 	}
 
 	if !found {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.New("Patient not found!")})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("Data Patient dengan id %d tidak ditemukan", user_id),
+			"data":    utils.NullData,
+		})
 		return
 	}
 
 	p.Password = ""
 
-	c.JSON(http.StatusOK, gin.H{"message": "success", "data": p})
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Berhasil mengambil detail data Patient",
+		"data":    p,
+	})
 }
 
 func LoginPatient(c *gin.Context) {
@@ -57,13 +75,22 @@ func LoginPatient(c *gin.Context) {
 
 	err := c.ShouldBindJSON(&patient)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Field Name dan Password tidak boleh kosong",
+			"data":    utils.NullData,
+		})
 		return
 	}
 
 	err2, patients := repository.GetAllPatients(database.DbConnection)
 	if err2 != nil {
-		panic(err2)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
 	}
 	var hashedPassword string
 	var ID uint
@@ -76,24 +103,41 @@ func LoginPatient(c *gin.Context) {
 		}
 	}
 	if hashedPassword == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Name is not found"})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("Data Patient dengan Name %s tidak ditemukan", patient.Name),
+			"data":    utils.NullData,
+		})
 		return
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(patient.Password))
 
 	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Name or password is incorrect."})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Password is incorrect",
+			"data":    utils.NullData,
+		})
 		return
 	}
 
 	token, err := token.GenerateToken(ID)
 
 	if err != nil {
-		panic(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Berhasil login akun Patient",
+		"token":   token,
+	})
 
 }
 
@@ -103,7 +147,11 @@ func RegisterPatient(c *gin.Context) {
 
 	err := c.ShouldBindJSON(&patient)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Field Name dan Password tidak boleh kosong",
+			"data":    utils.NullData,
+		})
 		return
 	}
 
@@ -113,7 +161,12 @@ func RegisterPatient(c *gin.Context) {
 	err2, patients := repository.GetAllPatients(database.DbConnection)
 	patient.ID = 0
 	if err2 != nil {
-		panic(err2)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
 	}
 	for _, v := range patients {
 		if v.ID > patient.ID {
@@ -125,7 +178,12 @@ func RegisterPatient(c *gin.Context) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(patient.Password), bcrypt.DefaultCost)
 	if err != nil {
-		panic(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
 	}
 	patient.Password = string(hashedPassword)
 
@@ -134,9 +192,18 @@ func RegisterPatient(c *gin.Context) {
 
 	err = repository.InsertPatient(database.DbConnection, patient)
 	if err != nil {
-		panic(err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Patient registration success"})
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Berhasil menambahkan data Patient",
+		"data":    utils.NullData,
+	})
 
 }
