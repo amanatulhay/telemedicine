@@ -155,6 +155,24 @@ func RegisterPatient(c *gin.Context) {
 		return
 	}
 
+	isDuplicate, err := IsDuplicatePatient(patient.Name)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
+	}
+	if isDuplicate {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("Data Patient dengan Name %s telah disimpan", patient.Name),
+			"data":    utils.NullData,
+		})
+		return
+	}
+
 	patient.CreatedAt = time.Now()
 	patient.UpdatedAt = time.Now()
 
@@ -205,5 +223,4 @@ func RegisterPatient(c *gin.Context) {
 		"message": "Berhasil menambahkan data Patient",
 		"data":    utils.NullData,
 	})
-
 }

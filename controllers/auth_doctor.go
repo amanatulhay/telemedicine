@@ -155,6 +155,24 @@ func RegisterDoctor(c *gin.Context) {
 		return
 	}
 
+	isDuplicate, err := IsDuplicateDoctor(doctor.Name)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
+	}
+	if isDuplicate {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("Data Doctor dengan Name %s telah disimpan", doctor.Name),
+			"data":    utils.NullData,
+		})
+		return
+	}
+
 	doctor.CreatedAt = time.Now()
 	doctor.UpdatedAt = time.Now()
 

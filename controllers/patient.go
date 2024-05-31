@@ -33,6 +33,21 @@ func GetAllPatients(c *gin.Context) {
 	}
 }
 
+func IsDuplicatePatient(name string) (bool, error) {
+
+	err, patients := repository.GetAllPatients(database.DbConnection)
+	if err != nil {
+		return true, err
+	}
+
+	for _, v := range patients {
+		if v.Name == name {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func InsertPatient(c *gin.Context) {
 	var patient structs.Patient
 
@@ -41,6 +56,24 @@ func InsertPatient(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"message": "Field Name dan Password tidak boleh kosong",
+			"data":    utils.NullData,
+		})
+		return
+	}
+
+	isDuplicate, err := IsDuplicatePatient(patient.Name)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
+	}
+	if isDuplicate {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("Data Patient dengan Name %s telah disimpan", patient.Name),
 			"data":    utils.NullData,
 		})
 		return
@@ -134,6 +167,24 @@ func UpdatePatient(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"message": "Field Name dan Password tidak boleh kosong",
+			"data":    utils.NullData,
+		})
+		return
+	}
+
+	isDuplicate, err := IsDuplicatePatient(patient.Name)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
+	}
+	if isDuplicate {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("Data Patient dengan Name %s telah disimpan", patient.Name),
 			"data":    utils.NullData,
 		})
 		return
