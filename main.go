@@ -106,5 +106,5 @@ func main() {
 	publicPatient.POST("/register", controllers.RegisterPatient)
 	publicPatient.POST("/login", controllers.LoginPatient)
 
-	router.Run("localhost:8080")
+	router.Run(":" + os.Getenv("PORT"))
 }
