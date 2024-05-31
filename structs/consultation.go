@@ -7,7 +7,7 @@ type Consultation struct {
 	MeetingLink string    `json:"meeting_link" binding:"required"`
 	PaymentLink string    `json:"payment_link" binding:"required"`
 	PatientID   int64     `json:"patient_id"`
-	DoctorID    int64     `json:"doctor_id"`
+	DoctorID    int64     `json:"doctor_id" binding:"required"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }

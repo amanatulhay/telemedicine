@@ -69,7 +69,7 @@ func GetAllConsultationsByPatientID(db *sql.DB, patient structs.Patient) (err er
 
 		err = rows.Scan(&consultation.ID, &consultation.MeetingLink, &consultation.PaymentLink, &consultation.PatientID, &consultation.DoctorID, &consultation.CreatedAt, &consultation.UpdatedAt)
 		if err != nil {
-			panic(err)
+			return err, nil
 		}
 
 		results = append(results, consultation)
@@ -93,7 +93,7 @@ func GetAllConsultationsByDoctorID(db *sql.DB, doctor structs.Doctor) (err error
 
 		err = rows.Scan(&consultation.ID, &consultation.MeetingLink, &consultation.PaymentLink, &consultation.PatientID, &consultation.DoctorID, &consultation.CreatedAt, &consultation.UpdatedAt)
 		if err != nil {
-			panic(err)
+			return err, nil
 		}
 
 		results = append(results, consultation)

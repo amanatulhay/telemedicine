@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"telemedicine/controllers"
 	"telemedicine/database"
 	"telemedicine/middlewares"
@@ -12,29 +13,22 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const (
-	host     = "localhost"
-	port     = 5432
-	user     = "postgres"
-	password = "admin"
-	dbname   = "telemedicine"
-)
-
 var (
 	DB  *sql.DB
 	err error
 )
 
 func main() {
-	err := godotenv.Load(".env")
+
+	err = godotenv.Load("config/.env")
 	if err != nil {
 		fmt.Println("failed load file environment")
 	} else {
 		fmt.Println("success read file environment")
 	}
 
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"))
 
 	DB, err = sql.Open("postgres", psqlInfo)
 	err = DB.Ping()
@@ -78,16 +72,27 @@ func main() {
 	authorized.PUT("/patients/:id", controllers.UpdatePatient)
 	authorized.DELETE("/patients/:id", controllers.DeletePatient)
 
+	// Router Admin - Prescriptions
+	authorized.GET("/prescriptions", controllers.GetAllPrescriptions)
+	authorized.POST("/prescriptions", controllers.InsertPrescription)
+	authorized.PUT("/prescriptions/:id", controllers.UpdatePrescription)
+	authorized.DELETE("/prescriptions/:id", controllers.DeletePrescription)
+	authorized.GET("/patients/:id/prescriptions", controllers.GetAllPrescriptionsByPatientID)
+	authorized.GET("/doctors/:id/prescriptions", controllers.GetAllPrescriptionsByDoctorID)
+
 	// Router JWT Auth
 	protected := router.Group("/api/")
 	protected.Use(middlewares.JwtAuthMiddleware())
 
-	protected.GET("/current-patient-data", controllers.CurrentPatientData)
 	protected.POST("/current-patient-add-consultation", controllers.CurrentPatientAddConsultation)
+	protected.GET("/current-patient-data", controllers.CurrentPatientData)
 	protected.GET("/current-patient-all-consultations", controllers.CurrentPatientAllConsultations)
+	protected.GET("/current-patient-all-prescriptions", controllers.CurrentPatientAllPrescriptions)
 
+	protected.POST("/current-doctor-add-prescription", controllers.CurrentDoctorAddPrescription)
 	protected.GET("/current-doctor-data", controllers.CurrentDoctorData)
-	protected.GET("/current-doctor-consultations", controllers.CurrentDoctorConsultations)
+	protected.GET("/current-doctor-all-consultations", controllers.CurrentDoctorAllConsultations)
+	protected.GET("/current-doctor-all-prescriptions", controllers.CurrentDoctorAllPrescriptions)
 
 	// Router Public Doctor
 	publicDoctor := router.Group("/doctor")

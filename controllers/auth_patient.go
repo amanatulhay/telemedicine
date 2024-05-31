@@ -70,6 +70,66 @@ func CurrentPatientData(c *gin.Context) {
 	})
 }
 
+func CurrentPatientAllPrescriptions(c *gin.Context) {
+
+	var p structs.Patient
+
+	user_id, err := token.ExtractTokenID(c)
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": err.Error(),
+			"data":    utils.NullData,
+		})
+		return
+	}
+
+	// Mencari data user berdasarkan ID
+	err2, patients := repository.GetAllPatients(database.DbConnection)
+	found := false
+	if err2 != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
+	}
+	for _, v := range patients {
+		if user_id == uint(v.ID) {
+			p = v
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("Data Patient dengan id %d tidak ditemukan", user_id),
+			"data":    utils.NullData,
+		})
+		return
+	}
+
+	err, prescriptions := repository.GetAllPrescriptionsByPatientID(database.DbConnection, p)
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": fmt.Sprintf("Berhasil mengambil seluruh data Prescriptions berdasarkan Token ID Pasien %d", p.ID),
+			"data":    prescriptions,
+		})
+	}
+}
+
 func CurrentPatientAddConsultation(c *gin.Context) {
 
 	var p structs.Patient
@@ -119,7 +179,7 @@ func CurrentPatientAddConsultation(c *gin.Context) {
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"message": "Field meeting_link, payment_link, patient_id, dan doctor_id tidak boleh kosong",
+			"message": "Field meeting_link, payment_link, dan doctor_id tidak boleh kosong",
 			"data":    utils.NullData,
 		})
 		return
