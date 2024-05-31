@@ -20,6 +20,7 @@ CREATE TABLE doctor (
 CREATE TABLE consultation (
     id BIGINT NOT NULL,
     meeting_link VARCHAR(256),
+    payment_link VARCHAR(256),
     patient_id BIGINT NOT NULL,
     doctor_id BIGINT NOT NULL,
     created_at timestamp,
@@ -29,6 +30,7 @@ CREATE TABLE consultation (
 CREATE TABLE prescription (
     id BIGINT NOT NULL,
     content VARCHAR(256),
+    payment_link VARCHAR(256),
     patient_id BIGINT NOT NULL,
     doctor_id BIGINT NOT NULL,
     consultation_id BIGINT NOT NULL,

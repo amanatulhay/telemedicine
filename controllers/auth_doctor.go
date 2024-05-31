@@ -17,7 +17,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func CurrentDoctor(c *gin.Context) {
+func CurrentDoctorData(c *gin.Context) {
 
 	var d structs.Doctor
 
@@ -67,6 +67,66 @@ func CurrentDoctor(c *gin.Context) {
 		"message": "Berhasil mengambil detail data Doctor",
 		"data":    d,
 	})
+}
+
+func CurrentDoctorConsultations(c *gin.Context) {
+
+	var d structs.Doctor
+
+	user_id, err := token.ExtractTokenID(c)
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": err.Error(),
+			"data":    utils.NullData,
+		})
+		return
+	}
+
+	// Mencari data user berdasarkan ID
+	err2, doctors := repository.GetAllDoctors(database.DbConnection)
+	found := false
+	if err2 != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+		return
+	}
+	for _, v := range doctors {
+		if user_id == uint(v.ID) {
+			d = v
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("Data Doctor dengan id %d tidak ditemukan", user_id),
+			"data":    utils.NullData,
+		})
+		return
+	}
+
+	err, consultations := repository.GetAllConsultationsByDoctorID(database.DbConnection, d)
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Internal Server Error",
+			"data":    utils.NullData,
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": fmt.Sprintf("Berhasil mengambil seluruh data Consultations berdasarkan Token ID Doctor %d", d.ID),
+			"data":    consultations,
+		})
+	}
 }
 
 func LoginDoctor(c *gin.Context) {

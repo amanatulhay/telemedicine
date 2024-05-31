@@ -58,21 +58,36 @@ func main() {
 		"editor": "secret",
 	}))
 
-	authorized.GET("/patients", controllers.GetAllPatients)
-	authorized.POST("/patients", controllers.InsertPatient)
-	authorized.PUT("/patients/:id", controllers.UpdatePatient)
-	authorized.DELETE("/patients/:id", controllers.DeletePatient)
+	// Router Admin - Consultations
+	authorized.GET("/consultations", controllers.GetAllConsultations)
+	authorized.POST("/consultations", controllers.InsertConsultation)
+	authorized.PUT("/consultations/:id", controllers.UpdateConsultation)
+	authorized.DELETE("/consultations/:id", controllers.DeleteConsultation)
+	authorized.GET("/patients/:id/consultations", controllers.GetAllConsultationsByPatientID)
+	authorized.GET("/doctors/:id/consultations", controllers.GetAllConsultationsByDoctorID)
 
+	// Router Admin - Doctors
 	authorized.GET("/doctors", controllers.GetAllDoctors)
 	authorized.POST("/doctors", controllers.InsertDoctor)
 	authorized.PUT("/doctors/:id", controllers.UpdateDoctor)
 	authorized.DELETE("/doctors/:id", controllers.DeleteDoctor)
 
-	// Router Public Patient
-	publicPatient := router.Group("/patient")
+	// Router Admin - Patients
+	authorized.GET("/patients", controllers.GetAllPatients)
+	authorized.POST("/patients", controllers.InsertPatient)
+	authorized.PUT("/patients/:id", controllers.UpdatePatient)
+	authorized.DELETE("/patients/:id", controllers.DeletePatient)
 
-	publicPatient.POST("/register", controllers.RegisterPatient)
-	publicPatient.POST("/login", controllers.LoginPatient)
+	// Router JWT Auth
+	protected := router.Group("/api/")
+	protected.Use(middlewares.JwtAuthMiddleware())
+
+	protected.GET("/current-patient-data", controllers.CurrentPatientData)
+	protected.POST("/current-patient-add-consultation", controllers.CurrentPatientAddConsultation)
+	protected.GET("/current-patient-all-consultations", controllers.CurrentPatientAllConsultations)
+
+	protected.GET("/current-doctor-data", controllers.CurrentDoctorData)
+	protected.GET("/current-doctor-consultations", controllers.CurrentDoctorConsultations)
 
 	// Router Public Doctor
 	publicDoctor := router.Group("/doctor")
@@ -80,12 +95,11 @@ func main() {
 	publicDoctor.POST("/register", controllers.RegisterDoctor)
 	publicDoctor.POST("/login", controllers.LoginDoctor)
 
-	// Router JWT Auth
-	protected := router.Group("/api/")
-	protected.Use(middlewares.JwtAuthMiddleware())
+	// Router Public Patient
+	publicPatient := router.Group("/patient")
 
-	protected.GET("/patient-data", controllers.CurrentPatient)
-	protected.GET("/doctor-data", controllers.CurrentDoctor)
+	publicPatient.POST("/register", controllers.RegisterPatient)
+	publicPatient.POST("/login", controllers.LoginPatient)
 
 	router.Run("localhost:8080")
 }
